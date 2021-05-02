@@ -4,6 +4,7 @@ import sys
 import json
 import glob
 import MeCab
+from difflib import SequenceMatcher , Differ
 
 import subprocess
 
@@ -12,17 +13,25 @@ FILE_NAME = 'result'
 
 # jsonファイルの読み込み
 CHAT_KEYS = ["authorExternalChannelId","user","timestampUsec","time","authorbadge","text","purchaseAmount","type","video_id","Chat_No"]
+DICT_CHAT_CHANNNELID = 0
 DICT_CHAT_TEXT = 5
 DICT_CHAT_KEY = 9
+
 # 形態素解析結果
-MORPHOLOGICAL_ANALYSIS_KEYS = ["mplg_words","mplg_text","line_count"]
+MORPHOLOGICAL_ANALYSIS_KEYS = ["mplg_words","mplg_text","mplg_soup"]
 INDEX_MPLG_WORDS = 0
 INDEX_MPLG_TEXT = 1
-INDEX_LINE_COUNT = 2
+INDEX_MPLG_SOUP = 2
+
+# 形態素解析結果差分
+SIMILARITY_DIFF_KEYS = ["origin_authorExternalChannelId", "diff_chat_no", "diff_authorExternalChannelId", "similarity"]
+INDEX_SIMILARITY_ORIGIN_CHANNEL_ID = 0
+INDEX_SIMILARITY_DIFF_CHAT_NO = 1
+INDEX_SIMILARITY_DIFF_CHANNEL_ID = 2
+INDEX_SIMILARITY = 3
 
 # 辞書ファイルパス
 DIC_PATH = ' -d /usr/local/mecab/lib/mecab/dic/mecab-ipadic-neologd'
-# DIC_PATH = ' -d /usr/local/mecab/lib/mecab/dic/ipadic'
 
 def read_comment_json(input_file):
     """ コメントjsonを読み込む
@@ -36,33 +45,45 @@ def read_comment_json(input_file):
 
     return return_dict
 
-
-def morphological_analysis(dict_comments):
+def morphological_analysis(comments_dict):
     """ 形態素解析を行い、dict型で返す。
     形態素解析結果はCHAT_KEYS[DICT_CHAT_KEY]の値をキーにしたdict型で返す。
     """
     return_dict = {}
-    for key in dict_comments:
+    for key in comments_dict:
         # コメントを取得
-        comment = dict_comments[key][CHAT_KEYS[DICT_CHAT_TEXT]]
+        comment = comments_dict[key][CHAT_KEYS[DICT_CHAT_TEXT]]
 
         # print(comment)
 
         # 形態素解析を行う
-        words, text = mplg(comment)
+        words, text = mplg_edit(comment)
+        soup = mplg(comment)
 
         # dict型に変換して返す。
-        mplg_result = {INDEX_MORPHOLOGICAL_ANALYSIS[INDEX_MPLG_WORDS]: words , INDEX_MORPHOLOGICAL_ANALYSIS[INDEX_MPLG_TEXT]: text}
+        mplg_result = {
+            MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_WORDS]: words ,
+            MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_TEXT]: text ,
+            MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_SOUP]: soup }
         return_dict[key] = mplg_result
+
+    return return_dict
 
 def mplg(text):
     """ 形態素解析を行う。
+    """
+    m = MeCab.Tagger(DIC_PATH)
+    soup = m.parse (text)
+    return soup
+
+def mplg_edit(text):
+    """ 形態素解析を行う。必要な項目だけ取得する。
+    TODO: 必要な項目を絞り込む
     """
     output_words = []
     output_text  = ''
     # 辞書へのパス
     m = MeCab.Tagger(DIC_PATH)
-    # m = MeCab.Tagger()
     soup = m.parse (text)
     for row in soup.split("\n"):
         word =row.split("\t")[0]
@@ -81,23 +102,37 @@ def mplg(text):
                         output_text = output_text + ' ' + slice[-3]
     return output_words,output_text
 
+def get_over_length_keys(mplg_dict, length):
+    """ コメントの形態素解析結果のサイズがlength以上のkeyの一覧を返す。
+    """
+    
+    return_list = []
+    for key in mplg_dict:
+        if len(mplg_dict[key][MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_SOUP]].splitlines()) > length:
+            return_list.append(key)
+    return return_list
 
-def get_diff_morphological_analysis():
+def get_diff_morphological_analysis(comments_dict, mplg_dict, key_list):
     """ 形態素解析結果の差分を取得する
     """
-    # 行数取得
-    files = glob.glob(OUTPUT_DIR + '*')
-    for file in files:
-        item_dict[os.path.basename(file)][MORPHOLOGICAL_ANALYSIS_KEYS[0]] = int(subprocess.check_output(['wc', '-l', file]).decode().split(' ')[0])
 
-    # 形態素解析結果の差分を取得する
-    for filename in item_dict.key:
-        if item_dict[filename][MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_LINE_COUNT]] > 50:
-            # 形態素解析結果が50行以上の場合のみDiffする。
-            for diff_filename in item_dict.key:
-                if item_dict[diff_filename][MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_LINE_COUNT]] > 50:
-                    # 比較対象のファイルも50行以上の場合のみDiffする。
-                    pass
+    return_list = []
+    
+    for key in key_list:
+        for diff_key in key_list:
+            if int(key) < int(diff_key):
+                similarity = SequenceMatcher(
+                    None,
+                    mplg_dict[key][MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_SOUP]],
+                    mplg_dict[diff_key][MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_SOUP]]).ratio()
+                if similarity > 0.8:
+                    return_list.append({
+                        'chat_id': key,
+                        SIMILARITY_DIFF_KEYS[INDEX_SIMILARITY_ORIGIN_CHANNEL_ID]: comments_dict[key][CHAT_KEYS[DICT_CHAT_CHANNNELID]],
+                        SIMILARITY_DIFF_KEYS[INDEX_SIMILARITY_DIFF_CHAT_NO]: diff_key,
+                        SIMILARITY_DIFF_KEYS[INDEX_SIMILARITY_DIFF_CHANNEL_ID]: comments_dict[diff_key][CHAT_KEYS[DICT_CHAT_CHANNNELID]],
+                        SIMILARITY_DIFF_KEYS[INDEX_SIMILARITY]: similarity})
+    return return_list
 
 if __name__ == '__main__':
     args_index = 0
@@ -105,9 +140,16 @@ if __name__ == '__main__':
 
     INPUT_FILE = sys.argv[args_index] ; args_index = args_index + 1;
 
-    # print('INPUT_FILE : ' + INPUT_FILE)
-
+    # コメントファイルをdictに変換する。
     item_dict = read_comment_json(INPUT_FILE)
 
+    # 取得したコメントファイルのコメントを形態素解析する。
     mplg_dict = morphological_analysis(item_dict)
-    print(mplg_dict['00000'])
+    
+#    # 類似度を取得する
+#    text00104 = mplg_dict['00104'][MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_SOUP]]
+#    text00299 = mplg_dict['00299'][MORPHOLOGICAL_ANALYSIS_KEYS[INDEX_MPLG_SOUP]]
+#    print(SequenceMatcher(None, text00104, text00299).ratio())
+
+    diff_morphological_analysis = get_diff_morphological_analysis(item_dict, mplg_dict, get_over_length_keys(mplg_dict, 50))
+    print(json.parse(diff_morphological_analysis))
