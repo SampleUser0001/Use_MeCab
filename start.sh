@@ -1,7 +1,7 @@
 #!/bin/bash
 
-INPUT_FILE=/app/input/chatlog_replay_pmTQqhpHAHs.json
-python app.py ${INPUT_FILE} > ./output/tmp_result.json
+INPUT_FILE=/app/input/${VIDEO_ID}.json
+python app.py ${VIDEO_ID} ${INPUT_FILE} 
 
 # export PATH=/usr/local/mecab/bin:$PATH
 # mecab input/comments.txt -o tmp/result.txt

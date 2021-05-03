@@ -6,5 +6,7 @@ services:
     volumes:
       - ./start.sh:/start.sh
       - ./app:/app
+    environment:
+      VIDEO_ID: pmTQqhpHAHs
     command:
       sh /start.sh
