@@ -4,9 +4,9 @@ FROM python
 RUN apt update && apt upgrade -y
 RUN apt install -y wget gcc make g++ less
 
-WORKDIR /root
 
 # MeCabインストール
+WORKDIR /root
 RUN wget -O "mecab.tar.gz" "https://drive.google.com/uc?export=download&id=0B4y35FiV1wh7cENtOXlicTFaRUE"
 RUN tar xvfz mecab.tar.gz
 WORKDIR /root/mecab-0.996
@@ -15,6 +15,7 @@ RUN ./configure --enable-utf8-only --prefix=/usr/local/mecab && make && make ins
 ENV PATH=/usr/local/mecab/bin:$PATH
 
 # 辞書インストール
+WORKDIR /root
 RUN wget -O "mecab-ipadic.tar.gz" "https://drive.google.com/uc?export=download&id=0B4y35FiV1wh7MWVlSDBCSXZMTXM"
 RUN tar xvfz mecab-ipadic.tar.gz
 WORKDIR /root/mecab-ipadic-2.7.0-20070801
