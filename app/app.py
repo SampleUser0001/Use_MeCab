@@ -118,5 +118,5 @@ if __name__ == '__main__':
     comments_ng_merged = merge_ng_comments(comment_list, ng_comment_dict)
     
     # 結果をファイルに出力
-    with open(OUTPUT_DIR + '/' + 'result_' + VIDEO_ID + '.json' , mode='w') as f:
+    with open(OUTPUT_DIR + 'result_' + VIDEO_ID + '.json' , mode='w') as f:
         f.write(json.dumps(comments_ng_merged))
