@@ -130,6 +130,7 @@ dmypy.json
 
 # App
 /app/input/*
+!/app/input/pmTQqhpHAHs.json
 !/app/input/ng_pattern/pmTQqhpHAHs/*
 /app/tmp/*
 /app/output/*
