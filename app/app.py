@@ -150,7 +150,6 @@ if __name__ == '__main__':
 
     # コメントにNGフラグ、引っかかったパターン、類似度を付与する。
     comments_ng_merged = merge_ng_comments(comment_list, ng_comment_dict)
-
     # NGフラグを付与したコメントを出力する。
     with open(OUTPUT_COMMENT_DIR + VIDEO_ID + '.json' , mode='w') as f:
         f.write(json.dumps(comments_ng_merged))

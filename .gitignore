@@ -129,6 +129,10 @@ dmypy.json
 .pyre/
 
 # App
-/app/input/*.json
+/app/input/*
+!/app/input/pmTQqhpHAHs.json
+!/app/input/ng_pattern/pmTQqhpHAHs/*
 /app/tmp/*
 /app/output/*
+!/app/output/result_pmTQqhpHAHs.json
+
