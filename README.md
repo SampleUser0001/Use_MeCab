@@ -44,15 +44,26 @@
 },
 ```
 
-#### チャンネルURL
+### チャンネルURL
 
 ``` sh
-./app/output/channel/${動画ID}.json
+./app/output/channel/${動画ID}.txt
 ```
 
 #### フォーマット
 
 URLの一覧のテキストファイル
+
+### ユーザID
+
+``` sh
+./app/output/user/${動画ID}.txt
+```
+
+#### フォーマット
+
+ユーザIDの一覧のテキストファイル
+
 
 ## 参考
 

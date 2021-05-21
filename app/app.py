@@ -10,6 +10,7 @@ NG_PATTERN_DIR = './input/ng_pattern/**'
 
 OUTPUT_COMMENT_DIR = './output/comment/'
 OUTPUT_CHANNEL_DIR = './output/channel/'
+OUTPUT_USER_DIR = './output/user/'
 
 # jsonファイルの読み込み
 CHAT_KEYS = ["authorExternalChannelId","user","timestampUsec","time","authorbadge","text","purchaseAmount","type","video_id","Chat_No"]
@@ -77,12 +78,14 @@ def get_ng(comment_list, ng_pattern, threshold):
         value : json
             pattern : 一致した形態素解析結果ファイル
             similarity : 類似度
-    
     ng_channel_list : list
         NG判定したチャンネルURL
+    ng_user_list : list
+        NG判定したユーザID
     """
     ng_comments = {}
     ng_channel_list = []
+    ng_user_list = []
     for comment_key in range(0, len(comment_list)):
         mplg_result = mplg(comment_list[comment_key][CHAT_KEYS[DICT_CHAT_TEXT]])
         for ng_key in ng_pattern:
@@ -94,12 +97,13 @@ def get_ng(comment_list, ng_pattern, threshold):
                     NG_RESULT_KEYS[INDEX_NG_RESULT_SIMILARITY]: similarity
                 }
                 
-                # チャンネルURLの取得
-                ng_channel_url = YOUTUBE_CHANNEL + comment_list[comment_key][CHAT_KEYS[DICT_CHAT_CHANNNELID]]
-                if ng_channel_url not in ng_channel_list:
-                    ng_channel_list.append(ng_channel_url)
+                # ユーザの取得
+                ng_user = comment_list[comment_key][CHAT_KEYS[DICT_CHAT_CHANNNELID]]
+                if ng_user not in ng_user_list:
+                    ng_user_list.append(ng_user)
+                    ng_channel_list.append(YOUTUBE_CHANNEL + ng_user)
                 break
-    return ng_comments, ng_channel_list
+    return ng_comments, ng_channel_list, ng_user_list
 
 def merge_ng_comments(comment_list, ng_comment_dict):
     """ コメントにNG情報を付与する
@@ -142,7 +146,7 @@ if __name__ == '__main__':
 #        f.write(json.dumps(comment_infos))
 
     # NGェック
-    ng_comment_dict, ng_channel_list = get_ng(comment_list, ng_pattern, 0.8)
+    ng_comment_dict, ng_channel_list, ng_user_list = get_ng(comment_list, ng_pattern, 0.8)
 
     # コメントにNGフラグ、引っかかったパターン、類似度を付与する。
     comments_ng_merged = merge_ng_comments(comment_list, ng_comment_dict)
@@ -156,3 +160,7 @@ if __name__ == '__main__':
     with open(OUTPUT_CHANNEL_DIR + VIDEO_ID + '.txt' , mode='w') as f:
         f.write('\n'.join(ng_channel_list))
         # newlineオプション + writelines関数が聞かない？
+        
+    # NG判定したユーザ一覧を出力する
+    with open(OUTPUT_USER_DIR + VIDEO_ID + '.txt' , mode='w') as f:
+        f.write('\n'.join(ng_user_list))
